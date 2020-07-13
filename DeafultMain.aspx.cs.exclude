@@ -1,0 +1,41 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using BusinessLayer.MainMaterPage;
+using BusinessObject.MainMastePage;
+using System.Data;
+using System.Web.UI.HtmlControls;
+
+public partial class DeafultMain : System.Web.UI.Page
+{
+    DataTable dt = new DataTable();
+    Bl_00_MasterPage BlMasterPage;
+    BO_00_MasterPage BoMastePage;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        CustomNavigation();
+    }
+
+    private void CustomNavigation()
+    {
+
+       
+        BlMasterPage = new Bl_00_MasterPage();
+        BO_00_MasterPage BoMasterPage = new BO_00_MasterPage();
+        dt = BlMasterPage.GetAllSuperMenu(BoMastePage);
+
+        foreach (DataRow drOutput in dt.Rows)
+        {
+            HtmlGenericControl div = new HtmlGenericControl("div");
+            thisSection.Controls.Add(div);
+
+            HtmlGenericControl anchor = new HtmlGenericControl("a");
+            anchor.InnerHtml = " <div class='col-md-3'>     <div class='sm-st clearfix'> <span class='sm-st-icon st-" + drOutput["PanelColor"] + "'><i class='" + drOutput["Icon"] + "'></i></span>   <div class='sm-st-info'> <span> " + drOutput["MenuName"] + " </span>" + drOutput["MenuText"] + "</div></div>  </div> ";
+            anchor.Attributes.Add("href", Convert.ToString("http://localhost:50927/" + drOutput["MenuURL"]+"?eq="+drOutput["MainMenuId"] ));
+            div.Controls.Add(anchor);
+        }
+    }
+}
